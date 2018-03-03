@@ -22,6 +22,7 @@
     is.numeric(a)
     
     # Integer
+    
     c <- 3
     class(c)
     is.integer(c)
@@ -47,8 +48,8 @@
     # Character
     
     s <- "R is super cool"
-    d <- "TRUE"
     class(s)
+    d <- "TRUE"
     class(d)
     d <- TRUE
     class(d)
@@ -84,7 +85,7 @@
     3:100
     length(l)
     
-    # select elelments in a vector
+    # select elements in a vector
     
     a <- c(1, 2, 1, 5, 8)
     a[3]
@@ -100,7 +101,6 @@
     
    mysimpledata <- data.frame(a = c(1, 2, 3), b = c("a", "a", "a"),
                               c = c(T, T ,F))
-    
     
    mysimpledata[1, ]
    mysimpledata[3, 3]
@@ -121,6 +121,6 @@
    View(iris[iris$Species == "setosa", ])
     
    iris$Petal.Length
-    print(a)
+   print(a)
     
         
