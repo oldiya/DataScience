@@ -1,2 +1,3 @@
 # DataScienceSessions
-Sessions done during the DataScience course 1
+Scripts used during the Data Science course / sessions 1.0
+
