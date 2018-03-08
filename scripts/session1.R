@@ -51,6 +51,8 @@
     class(s)
     d <- "TRUE"
     class(d)
+    
+    # not a character:
     d <- TRUE
     class(d)
     
