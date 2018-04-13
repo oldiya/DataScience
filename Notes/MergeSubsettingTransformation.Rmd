@@ -1,0 +1,315 @@
+---
+title: "Merge, intro to optimization and variable transformation with R"
+author: "Olalla Díaz-Yáñez"
+date: "4/8/2018"
+output:
+  pdf_document:
+    toc: yes
+  html_document:
+    toc: yes
+    toc_float: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Merge
+
+[Merge function](http://stat.ethz.ch/R-manual/R-devel/library/base/html/merge.html) help us to merge two data frames by common columns or row names. 
+
+It is always best to explicitly state the identifiers on which you want to merge; it's safer if the input data.frames change unexpectedly and easier to read later on. By using the merge function and its optional parameters you can specify by which variable you want to merge the frames to be sure that the matching is in the fields you desire.
+
+Lets see now some examples of different merges. 
+
+We are going to create two simple data.frames:
+
+```{r dataframes}
+dfA <- data.frame (TreeId = c(1:6), Specie = c(rep ("Pine", 3), rep ("Spruce", 3)))
+dfB <- data.frame (TreeId = c(2, 4, 6), DevelopmentClass = c(rep ("Young", 2),
+                                                             rep ("Old", 1)))
+
+print(dfA)
+print(dfB)
+
+```
+
+## Inner merge
+
+![Inner merge (Source: wikipedia)](Figures/Innerjoin.png)
+
+An [inner merge](https://en.wikipedia.org/wiki/merge_%28SQL%29#Inner_merge) requires each row in the two merged tables to have matching column values. The inner merge will create a new table with    those trees that have same ID number in A and B, it will compare each row of A with each row of B to find all pairs of rows that have same tree ID. 
+
+```{r inner merge }
+merge(dfA, dfB, by = "TreeId") 
+```
+
+You can also use the by.x and by.y parameters if the matching variables have different names in the different data frames, for example:
+
+```{r dataframes with different names}
+dfC <- data.frame (TreeID = c(1:6), Specie = c(rep ("Pine", 3), rep ("Spruce", 3)))
+dfD <- data.frame (TreeId = c(2, 4, 6), DevelopmentClass = c(rep ("Young", 2),                                                            rep ("Old", 1)))
+
+print(dfC)
+print(dfD)
+
+merge(dfC, dfD, by.x = "TreeID", by.y = "TreeId") 
+
+```
+
+## Outer merge
+
+An [Outer merge](https://en.wikipedia.org/wiki/merge_%28SQL%29#Outer_merge) could be a full outer merge, a left outer merge or right outer merge. 
+
+### Full outer merge
+
+![Full outer merge (Source: wikipedia)](Figures/AFulljoinB.png)
+
+A [full outer merge](https://en.wikipedia.org/wiki/merge_%28SQL%29#Full_outer_merge) combines the effect of applying both left and right outer merges. In this case we will have all rows from both tables, including those that do not match, in those unmatching cases we will have NULL value for the new common variables:
+
+```{r all outer merge }
+merge(x = dfA, y = dfB, by = "TreeId", all = TRUE)
+```
+
+### Left outer merge
+
+![Left outer merge (Source: wikipedia)](Figures/LeftjoinB.png)
+
+A [left outer merge](https://en.wikipedia.org/wiki/merge_%28SQL%29#Left_outer_merge) for tables A and B always contains all rows of the "left" table (A), even if the merge-condition does not find any matching row in the "right" table (B). Here we will also have NULL values in rows (TreeIds) that are in A but not in B.
+ 
+```{r left outer merge}
+merge(x = dfA, y = dfB, by = "TreeId", all.x = TRUE)
+```
+
+### Right outer merge
+
+![Left outer merge (Source: wikipedia)](Figures/ARightjoinB.png)
+
+A [right outer merge](https://en.wikipedia.org/wiki/merge_%28SQL%29#Right_outer_merge) for tables A and B always contains all rows of the "right" table (B), even if the merge-condition does not find any matching row in the "left" table (A). Here we will also have NULL values in rows (TreeIds) that are in B but not in A.
+ 
+```{r right outer merge}
+merge(x = dfA, y = dfB, by = "TreeId", all.y = TRUE)
+```
+
+## Cross merge
+
+![Left outer merge (Source: wikipedia)](Figures/A_Cross_join_B.png)
+
+A [cross merge](https://en.wikipedia.org/wiki/merge_%28SQL%29#Cross_merge) is just as the inner merge but without specifiying what is the matching variable, it is kind of "all with all" matching where the resulting table will show all posible combinations. 
+
+```{r merge cross }
+merge(x = dfA, y = dfB, by = NULL)
+```
+
+# Intro to optimization with R
+
+A mathematical optimization uses a rigorous mathematical model to determine the
+most efficient solution to a problem. First is necessary to identify what is the objective, the objective is a quantitative measure of the performance (e.g. cubic metres of wood or kg of berries), in general, any quantity (or combination thereof) represented as a
+single number.
+
+Problem type  | Package       | Routine
+------------- | ------------- | -------------
+General purpose (1-dim.) | Built-in | optimize(...)
+General purpose (n-dim.) | Built-in | optim(...)
+Linear Programming | lpSolve | lp(...)
+Quadratic Programming | quadprog | solve.QP(...)
+Quadratic Programming  | quadprog | solve.QP(...)
+Non-Linear Programming  | optimize | optimize(...)
+                        | optimx | optimx(...)
+General interface | ROI | ROI_solve(...)
+
+All available packages are listed in the CRAN task view for optimization and mathematical programming: “Optimization and mathematical programming” https://cran.r-project.org/web/views/Optimization.html
+
+The format is generic to all the functions: optimizer(objective, constraints, bounds, types, maximum)
+
+We can see how the function optimize() is used with a simple example:
+
+```{r sales-revenue}
+# These are the sales and revenue functions for one product 
+sales <- function(price) {100 - 0.5 * price }
+revenue <- function(price) {price * sales(price)}
+
+# We can plot this functions to see how they behave
+par(mfrow=c(1, 2))
+curve(sales, from = 20, to = 180, xname = "price", ylab = "Sales", main = "Sales")
+curve(revenue, from = 20, to = 180, xname = "price", ylab = "Revenue", main = "Revenue")
+```
+
+We can now use the optimize function to find which price value will give the highest sales.
+
+```{r sales-price opt}
+optimize(revenue, interval=c(20, 180), maximum=TRUE)
+```
+
+As we observed graphically when we charge a price of 100 EUR, and expect to get 5.000 EUR in revenue.
+
+Another example but this time looking for the minimun:
+
+```{r opt example 2}
+
+func <- function(x){
+  return ( (x-2)^2 )}
+
+# What is the value of the functions when x = -2
+func(-2)
+
+# plot the function
+curve(func,-4,8) 
+
+# you can find the minimum using again the optimize function
+optimize (f = func, interval = c(-10, 10))
+
+```
+
+The challenge is that in forestry we will typically have situations way more complex where multiple values would be involved and several restrictions aplied. In those cases first you will have to define which method is the best approach for each case, as problems vary in size and complexity. Depending on the problem optimization methods have specific advantages.
+
+Another cool optimization problem is the circus tent problem, you can find a visual example [here](https://rwalk.xyz/the-circus-tent-problem-with-rs-quadprog/).
+
+**NOTE**: [Subsetting](http://adv-r.had.co.nz/Subsetting.html#subsetting-answers) is not the same as optimizing.
+
+
+# Data transformation in R
+
+During the [research methods course](http://olalladiaz.net/classes/OtherRespVar.html#how-do-we-model-other-response-variables)  we saw that when we model continuous response variables using linear models we made several important assumptions about its behaviors:
+
+* constant variance
+* normal errors
+* independent errors
+* random sampling
+
+"Data transformation" is a fancy term for changing the values of observations through some mathematical operation. Such transformations are simple in R and it is simply to assign a variable the value of the transformed variable.
+
+I found a nice review in this [page](http://fmwww.bc.edu/repec/bocode/t/transint.html) 
+
+## Reciprocal
+
+The reciprocal, x to 1/x, with its sibling the negative reciprocal, x to -1/x, is a very strong transformation with a drastic effect on distribution shape. It can not be applied to zero values. Although it can be applied to negative values, it is not useful unless all values arepositive. The reciprocal of a ratio may often be interpreted as easily as the ratio itself: e.g.
+
+* population density (people per unit area) becomes area per person;
+* persons per doctor becomes doctors per person;
+* rates of erosion become time to erode a unit depth.
+
+The reciprocal reverses order among values of the same sign: largest becomes smallest, etc. The negative reciprocal preserves order among values of the same sign.
+
+## Logarithm
+
+The logarithm, x to log base 10 of x, or x to log base e of x (ln x), or x to log base 2 of x, is a strong transformation with a major effect on distribution shape. It is commonly used for reducing right skewness and is often appropriate for measured variables. It can not be applied to zero or negative values. One unit on a logarithmic scale means a multiplication by the base of logarithms being used. 
+
+## Cube root 
+
+The cube root, x to x^(1/3). This is a fairly strong transformation with a substantial effect on distribution shape: it is weaker than the logarithm. It is also used for reducing right skewness, and has the advantage that it can be applied to zero and negative values.  Note that
+for example the cube root of a volume has the units of a length. It is commonly applied to rainfall data.
+
+## Square root
+
+The square root, x to x^(1/2) = sqrt(x), is a transformation with a moderate effect on distribution shape: it is weaker than the logarithm and the cube root. It is also used for reducing right skewness, and also has the advantage that it can be applied to zero values. Note that the square root of an area has the units of a length. It is commonly applied to counted data, especially if the values are mostly rather small.
+
+## Square 
+
+The square, x to x^2, has a moderate effect on distribution shape and it could be used to reduce left skewness. In practice, the main reason for using it is to fit a response by a quadratic function y = a + b x + c x^2. Quadratics have a turning point, either a maximum or a minimum, although the turning point in a function fitted to data might be far  beyond the limits of the observations. The distance of a body from an origin is a quadratic if that body is moving under constant acceleration, which gives a very clear physical justification for using a quadratic. Otherwise quadratics are typically used solely because they can mimic a relationship within the data region. Outside that region they may behave very poorly, because they take on arbitrarily large values for extreme values of x, and unless the intercept a is constrained to be 0, they may behave unrealistically close to the origin.
+
+## Which transformation? 
+
+The main criterion in choosing a transformation is: what works with the data? As examples above indicate, it is important to consider as well two questions.
+
+What makes physical (biological, economic, whatever) sense, for example in terms of limiting behaviour as values get very small or very large? This question often leads to the use of logarithms.
+
+Can we keep dimensions and units simple and convenient? If possible, we prefer measurement scales that are easy to think about. The cube root of a volume and the square root of an area both have the dimensions of length, so far from complicating matters, such transformations may simplify them. Reciprocals usually have simple units, as mentioned earlier. Often, however, somewhat complicated units are a sacrifice that has to be made.
+
+
+Lets see a simple example on how to transfomr variables and create a model with and withour transformation on the variables:
+
+I obtained this data and example from [here](https://onlinecourses.science.psu.edu/stat501/node/427) and [here](https://onlinecourses.science.psu.edu/stat501/datasets). 
+
+```{r import data transformations}
+# Load the data
+shortleaf <- read.table("Data/shortleaf.txt", header=T)
+head(shortleaf)
+
+# Lets transform the variable Diam
+shortleaf$trans_diam <- (shortleaf$Diam)^3     #Raises Y to the power of 3
+shortleaf$trans_diam <- (shortleaf$Diam)^(1/9) #Takes the ninth root of Y
+shortleaf$trans_diam <- log(shortleaf$Diam)    #Takes the natural logarithm (ln) of Y
+shortleaf$trans_diam <- log10(shortleaf$Diam)  #Takes the base-10 logarithm of Y
+shortleaf$trans_diam <- exp(shortleaf$Diam)    #Raises the constant e to the power of Y
+shortleaf$trans_diam <- abs(shortleaf$Diam)    #Finds the absolute value of Y
+shortleaf$trans_diam <- sin(shortleaf$Diam)    #Calculates the sine of Y
+shortleaf$trans_diam <- asin(shortleaf$Diam)   #Calculates the inverse sine (arcsine) of Y
+
+
+
+```
+
+Fit a simple linear regression model of Vol on Diam.
+```{r linear model }
+model.1 <- lm(shortleaf$Vol ~ shortleaf$Diam)
+summary(model.1)
+```
+
+Display scatterplot of the data and add the regression line.
+
+```{r scatterplot }
+plot(x = shortleaf$Diam, y = shortleaf$Vol,
+     panel.last = lines(sort(shortleaf$Diam), fitted(model.1)[order(shortleaf$Diam)]))
+```
+
+Display residual plot with fitted (predicted) values on the horizontal axis.
+
+```{r scatterplot residuals}
+plot(x = fitted(model.1), y = residuals(model.1),
+     panel.last = abline(h=0, lty=2))
+```
+
+Display normal probability plot of the residuals and add a diagonal line to the plot.
+
+```{r normal prob resid}
+qqnorm(residuals(model.1), main="", datax=TRUE)
+qqline(residuals(model.1), datax=TRUE)
+```
+
+We can log-transforming both response and predictor to see what happens:
+
+Lets start with log(Diam) variable and fit a simple linear regression model of Vol on log(Diam).
+
+```{r log diam}
+shortleaf$lnDiam <- log(shortleaf$Diam)
+
+model.2 <- lm(shortleaf$Vol ~ shortleaf$lnDiam)
+summary(model.2)
+
+plot(x=shortleaf$lnDiam, y=shortleaf$Vol,
+     panel.last = lines(sort(shortleaf$lnDiam), fitted(model.2)[order(shortleaf$lnDiam)]))
+
+plot(x=fitted(model.2), y=residuals(model.2),
+     panel.last = abline(h=0, lty=2))
+
+qqnorm(residuals(model.2), main="", datax=TRUE)
+qqline(residuals(model.2), datax=TRUE)
+
+```
+
+
+Create log(Vol) variable and fit a simple linear regression model of log(Vol) on log(Diam).
+
+```{r log vol and diam}
+
+shortleaf$lnVol <- log(shortleaf$Vol)
+shortleaf$lnDiam <- log(shortleaf$Diam)
+
+model.3 <- lm(shortleaf$lnVol ~ shortleaf$lnDiam)
+summary(model.3)
+
+plot(x = shortleaf$lnDiam, y = shortleaf$lnVol,
+     panel.last = lines(sort(shortleaf$lnDiam), fitted(model.3)[order(shortleaf$lnDiam)]))
+
+plot(x = fitted(model.3), y = residuals(model.3),
+     panel.last = abline(h = 0, lty = 2))
+
+qqnorm(residuals(model.3), main = "", datax = TRUE)
+qqline(residuals(model.3), datax = TRUE)
+
+#exp(predict(model.3, interval = "confidence", newdata = data.frame (lnDiam = log(10))))
+```
+
+
+
